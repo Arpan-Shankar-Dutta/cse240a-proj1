@@ -127,7 +127,10 @@ main(int argc, char *argv[])
     train_predictor(pc, outcome);
   }
 
-  free(BHT);
+  free(Global_BHT);
+  free(PHT);
+  free(Local_BHT);
+  free(CHT);
   
   // Print out the mispredict statistics
   printf("Branches:        %10d\n", num_branches);

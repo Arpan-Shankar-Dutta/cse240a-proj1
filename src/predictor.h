@@ -38,6 +38,11 @@ extern const char *bpName[];
 #define WT  2			// predict T, weak taken
 #define ST  3			// predict T, strong taken
 
+#define SG  0
+#define WG  1
+#define WL  2
+#define SL  3
+
 //------------------------------------//
 //      Predictor Configuration       //
 //------------------------------------//
@@ -47,8 +52,11 @@ extern int pcIndexBits;  // Number of bits used for PC index
 extern int bpType;       // Branch Prediction Type
 extern int verbose;
 
-extern int *BHT;
+extern int *Global_BHT;
+extern uint32_t *PHT;
+extern int *Local_BHT;
 extern uint32_t GHR;
+extern int *CHT;
 //------------------------------------//
 //    Predictor Function Prototypes   //
 //------------------------------------//
