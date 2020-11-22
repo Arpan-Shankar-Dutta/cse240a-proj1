@@ -54,9 +54,9 @@ extern int verbose;
 
 extern uint8_t *Global_BHT;
 extern uint32_t *PHT;
-extern int *Local_BHT;
+extern uint8_t *Local_BHT;
 extern uint32_t GHR;
-extern int *CHT;
+extern uint8_t *CHT;
 //------------------------------------//
 //    Predictor Function Prototypes   //
 //------------------------------------//

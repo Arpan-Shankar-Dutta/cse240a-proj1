@@ -40,9 +40,9 @@ int verbose;
 
 uint8_t *Global_BHT;
 uint32_t *PHT;
-int *Local_BHT;
+uint8_t *Local_BHT;
 uint32_t GHR;
-int *CHT;
+uint8_t *CHT;
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -62,9 +62,9 @@ void init_predictor()
   uint32_t cht_size = pow(2, ghistoryBits);
 
   Global_BHT = malloc(global_bht_size*sizeof(uint8_t));
-  PHT = (uint32_t*)malloc(pht_size*sizeof(uint32_t));
-  Local_BHT = (int*)malloc(local_bht_size*sizeof(int));
-  CHT = (int*)malloc(cht_size*sizeof(int));
+  PHT = malloc(pht_size*sizeof(uint32_t));
+  Local_BHT = malloc(local_bht_size*sizeof(uint8_t));
+  CHT = malloc(cht_size*sizeof(uint8_t));
 
   for(i=0;i<global_bht_size;i++)
   {
@@ -86,7 +86,7 @@ void init_predictor()
     CHT[i] = WG;
   }
 
-  GHR = 0;
+  GHR = NOTTAKEN;
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -179,48 +179,36 @@ void train_tournament_predictor(uint32_t pc, uint8_t outcome)             //Trai
   uint8_t local_prediction = (Local_BHT[PHT[local_index]]>=WT) ? TAKEN : NOTTAKEN;
   uint8_t global_prediction = (Global_BHT[GHR]>=WT) ? TAKEN : NOTTAKEN;
 
-  if(local_prediction!=global_prediction)
+  if(local_prediction!=global_prediction && local_prediction==outcome && CHT[GHR]<SL)
   {
-    if((local_prediction==outcome) && (CHT[GHR]!=SL))
-    {
-      CHT[GHR] = CHT[GHR] + 1;
-    }
-    else if((global_prediction==outcome) && (CHT[GHR]!=SG))
-    {
-      CHT[GHR] = CHT[GHR] - 1;
-    }
+    CHT[GHR]++;
+  }
+  
+  if(local_prediction!=global_prediction && global_prediction==outcome && CHT[GHR]>SG)
+  {
+    CHT[GHR]--;
+  }
+  
+  if(outcome==TAKEN && Local_BHT[PHT[local_index]]<ST)
+  {
+    Local_BHT[PHT[local_index]]++;
   }
 
-  if(outcome==TAKEN)
+  if(outcome==NOTTAKEN && Local_BHT[PHT[local_index]]>SN)
   {
-    if(Local_BHT[PHT[local_index]]!=ST)
-    {
-      Local_BHT[PHT[local_index]] = Local_BHT[PHT[local_index]] + 1;
-    }
-  }
-  else
-  {
-    if(Local_BHT[PHT[local_index]]!=SN);
-    {
-      Local_BHT[PHT[local_index]] = Local_BHT[PHT[local_index]] - 1;
-    }
+    Local_BHT[PHT[local_index]]--;
   }
 
   PHT[local_index] = ((PHT[local_index]<<1) % local_bht_size) + outcome;
 
-  if(outcome==TAKEN)
+  if(outcome==TAKEN && Global_BHT[GHR]<ST)
   {
-    if(Global_BHT[GHR]!=ST)
-    {
-      Global_BHT[GHR] = Global_BHT[GHR] + 1;
-    }
+    Global_BHT[GHR]++;
   }
-  else
+
+  if(outcome==NOTTAKEN && Global_BHT[GHR]>SN)
   {
-    if(Global_BHT[GHR]!=SN);
-    {
-      Global_BHT[GHR] = Global_BHT[GHR] - 1;
-    }
+    Global_BHT[GHR]--;
   }
 
   GHR = ((GHR<<1) % global_bht_size) + outcome;
