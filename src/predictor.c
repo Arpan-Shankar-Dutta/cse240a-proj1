@@ -38,7 +38,7 @@ int verbose;
 //TODO: Add your own Branch Predictor data structures here
 //
 
-int *Global_BHT;
+uint8_t *Global_BHT;
 uint32_t *PHT;
 int *Local_BHT;
 uint32_t GHR;
@@ -56,12 +56,12 @@ void init_predictor()
   //TODO: Initialize Branch Predictor Data Structures
   //
   uint32_t i;
-  int global_bht_size = pow(2, ghistoryBits);
-  int pht_size = pow(2, pcIndexBits);
-  int local_bht_size = pow(2, lhistoryBits);
-  int cht_size = pow(2, ghistoryBits);
+  uint32_t global_bht_size = pow(2, ghistoryBits);
+  uint32_t pht_size = pow(2, pcIndexBits);
+  uint32_t local_bht_size = pow(2, lhistoryBits);
+  uint32_t cht_size = pow(2, ghistoryBits);
 
-  Global_BHT = (int*)malloc(global_bht_size*sizeof(int));
+  Global_BHT = malloc(global_bht_size*sizeof(uint8_t));
   PHT = (uint32_t*)malloc(pht_size*sizeof(uint32_t));
   Local_BHT = (int*)malloc(local_bht_size*sizeof(int));
   CHT = (int*)malloc(cht_size*sizeof(int));
@@ -155,19 +155,14 @@ void train_gshare_predictor(uint32_t pc, uint8_t outcome)                 //Trai
   uint32_t pc_low = pc % global_bht_size;
   uint32_t index = pc_low ^ GHR;
 
-  if(outcome==TAKEN)
+  if(outcome==TAKEN && Global_BHT[index]<ST)
   {
-    if(Global_BHT[index]!=ST)
-    {
-      Global_BHT[index] = Global_BHT[index] + 1;
-    }
+    Global_BHT[index]++;
   }
-  else
+  
+  if(outcome==NOTTAKEN && Global_BHT[index]>SN)
   {
-    if(Global_BHT[index]!=SN);
-    {
-      Global_BHT[index] = Global_BHT[index] - 1;
-    }
+    Global_BHT[index]--;
   }
 
   GHR = ((GHR<<1) % global_bht_size) + outcome;

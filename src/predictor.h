@@ -52,7 +52,7 @@ extern int pcIndexBits;  // Number of bits used for PC index
 extern int bpType;       // Branch Prediction Type
 extern int verbose;
 
-extern int *Global_BHT;
+extern uint8_t *Global_BHT;
 extern uint32_t *PHT;
 extern int *Local_BHT;
 extern uint32_t GHR;
