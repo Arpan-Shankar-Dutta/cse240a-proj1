@@ -125,7 +125,7 @@ uint8_t tournament_predictor(uint32_t pc)           //Tournament prediction sche
   local_prediction = (Local_BHT[PHT[local_index]]>=WT) ? TAKEN : NOTTAKEN;
   global_prediction = (Global_BHT[GHR]>=WT) ? TAKEN : NOTTAKEN;
 
-  prediction = (CHT[GHR]>=SL) ? local_prediction : global_prediction;
+  prediction = (CHT[GHR]>=WL) ? local_prediction : global_prediction;
 
   return prediction;
 }
@@ -209,8 +209,6 @@ void train_tournament_predictor(uint32_t pc, uint8_t outcome)             //Trai
     Local_BHT[PHT[local_index]]--;
   }
 
-  PHT[local_index] = ((PHT[local_index]<<1) & local_bht_size) + outcome;
-
   if(outcome==TAKEN && Global_BHT[GHR]<ST)
   {
     Global_BHT[GHR]++;
@@ -221,6 +219,7 @@ void train_tournament_predictor(uint32_t pc, uint8_t outcome)             //Trai
     Global_BHT[GHR]--;
   }
 
+  PHT[local_index] = ((PHT[local_index]<<1) & local_bht_size) + outcome;
   GHR = ((GHR<<1) & global_bht_size) + outcome;
 }
 
