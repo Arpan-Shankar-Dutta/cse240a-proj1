@@ -128,6 +128,7 @@ main(int argc, char *argv[])
   }
 
   free(Global_BHT);
+  free(Global_BHT_G);
   free(PHT);
   free(Local_BHT);
   free(CHT);

@@ -39,9 +39,11 @@ int verbose;
 //
 
 uint8_t *Global_BHT;
+uint8_t *Global_BHT_G;
 uint32_t *PHT;
 uint8_t *Local_BHT;
 uint32_t GHR;
+uint32_t GHR_G;
 uint8_t *CHT;
 
 //------------------------------------//
@@ -57,11 +59,13 @@ void init_predictor()
   //
   uint32_t i;
   uint32_t global_bht_size = pow(2, ghistoryBits);
+  uint32_t global_bht_size_G = pow(2, ghistoryBits);
   uint32_t pht_size = pow(2, pcIndexBits);
   uint32_t local_bht_size = pow(2, lhistoryBits);
   uint32_t cht_size = pow(2, ghistoryBits);
 
   Global_BHT = malloc(global_bht_size*sizeof(uint8_t));
+  Global_BHT_G = malloc(global_bht_size_G*sizeof(uint8_t));
   PHT = malloc(pht_size*sizeof(uint32_t));
   Local_BHT = malloc(local_bht_size*sizeof(uint8_t));
   CHT = malloc(cht_size*sizeof(uint8_t));
@@ -69,6 +73,11 @@ void init_predictor()
   for(i=0;i<global_bht_size;i++)
   {
     Global_BHT[i] = WN;
+  }
+
+  for(i=0;i<global_bht_size_G;i++)
+  {
+    Global_BHT_G[i] = WN;
   }
 
   for(i=0;i<pht_size;i++)
@@ -87,6 +96,7 @@ void init_predictor()
   }
 
   GHR = NOTTAKEN;
+  GHR_G = NOTTAKEN;
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -96,11 +106,11 @@ void init_predictor()
 uint8_t gshare_predictor(uint32_t pc)               //Gshare prediction scheme implementation
 {
   uint8_t prediction;
-  uint32_t global_bht_size = pow(2, ghistoryBits);
-  uint32_t pc_low = pc % global_bht_size;
-  uint32_t index = pc_low ^ GHR;
+  uint32_t global_bht_size_G = pow(2, ghistoryBits) - 1;
+  uint32_t pc_low = pc & global_bht_size_G;
+  uint32_t index = pc_low ^ GHR_G;
 
-  prediction = (Global_BHT[index]>=WT) ? TAKEN : NOTTAKEN;
+  prediction = (Global_BHT_G[index]>=WT) ? TAKEN : NOTTAKEN;
 
   return prediction;
 }
@@ -108,8 +118,8 @@ uint8_t gshare_predictor(uint32_t pc)               //Gshare prediction scheme i
 uint8_t tournament_predictor(uint32_t pc)           //Tournament prediction scheme implementation
 {
   uint8_t local_prediction, global_prediction, prediction;
-  uint32_t pht_size = pow(2, pcIndexBits);
-  uint32_t pc_low = pc % pht_size;
+  uint32_t pht_size = pow(2, pcIndexBits) - 1;
+  uint32_t pc_low = pc & pht_size;
   uint32_t local_index = pc_low;
 
   local_prediction = (Local_BHT[PHT[local_index]]>=WT) ? TAKEN : NOTTAKEN;
@@ -151,30 +161,30 @@ uint8_t make_prediction(uint32_t pc)
 
 void train_gshare_predictor(uint32_t pc, uint8_t outcome)                 //Training Gshare Predictor
 {
-  uint32_t global_bht_size = pow(2, ghistoryBits);
-  uint32_t pc_low = pc % global_bht_size;
-  uint32_t index = pc_low ^ GHR;
+  uint32_t global_bht_size_G = pow(2, ghistoryBits) - 1;
+  uint32_t pc_low = pc & global_bht_size_G;
+  uint32_t index = pc_low ^ GHR_G;
 
-  if(outcome==TAKEN && Global_BHT[index]<ST)
+  if(outcome==TAKEN && Global_BHT_G[index]<ST)
   {
-    Global_BHT[index]++;
+    Global_BHT_G[index]++;
   }
   
-  if(outcome==NOTTAKEN && Global_BHT[index]>SN)
+  if(outcome==NOTTAKEN && Global_BHT_G[index]>SN)
   {
-    Global_BHT[index]--;
+    Global_BHT_G[index]--;
   }
 
-  GHR = ((GHR<<1) % global_bht_size) + outcome;
+  GHR_G = ((GHR_G<<1) & global_bht_size_G) + outcome;
 }
 
 void train_tournament_predictor(uint32_t pc, uint8_t outcome)             //Training Tournament Predictor
 {
-  uint32_t pht_size = pow(2, pcIndexBits);
-  uint32_t pc_low = pc % pht_size;
+  uint32_t pht_size = pow(2, pcIndexBits) - 1;
+  uint32_t pc_low = pc & pht_size;
   uint32_t local_index = pc_low;
-  uint32_t local_bht_size = pow(2, lhistoryBits);
-  uint32_t global_bht_size = pow(2, ghistoryBits);
+  uint32_t local_bht_size = pow(2, lhistoryBits) - 1;
+  uint32_t global_bht_size = pow(2, ghistoryBits) - 1;
 
   uint8_t local_prediction = (Local_BHT[PHT[local_index]]>=WT) ? TAKEN : NOTTAKEN;
   uint8_t global_prediction = (Global_BHT[GHR]>=WT) ? TAKEN : NOTTAKEN;
@@ -199,7 +209,7 @@ void train_tournament_predictor(uint32_t pc, uint8_t outcome)             //Trai
     Local_BHT[PHT[local_index]]--;
   }
 
-  PHT[local_index] = ((PHT[local_index]<<1) % local_bht_size) + outcome;
+  PHT[local_index] = ((PHT[local_index]<<1) & local_bht_size) + outcome;
 
   if(outcome==TAKEN && Global_BHT[GHR]<ST)
   {
@@ -211,7 +221,7 @@ void train_tournament_predictor(uint32_t pc, uint8_t outcome)             //Trai
     Global_BHT[GHR]--;
   }
 
-  GHR = ((GHR<<1) % global_bht_size) + outcome;
+  GHR = ((GHR<<1) & global_bht_size) + outcome;
 }
 
 void train_predictor(uint32_t pc, uint8_t outcome)

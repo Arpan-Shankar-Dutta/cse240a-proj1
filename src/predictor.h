@@ -53,9 +53,11 @@ extern int bpType;       // Branch Prediction Type
 extern int verbose;
 
 extern uint8_t *Global_BHT;
+extern uint8_t *Global_BHT_G;
 extern uint32_t *PHT;
 extern uint8_t *Local_BHT;
 extern uint32_t GHR;
+extern uint32_t GHR_G;
 extern uint8_t *CHT;
 //------------------------------------//
 //    Predictor Function Prototypes   //
