@@ -129,6 +129,7 @@ main(int argc, char *argv[])
 
   free(Global_BHT);
   free(Global_BHT_G);
+  free(Global_BHT_C);
   free(PHT);
   free(Local_BHT);
   free(CHT);
