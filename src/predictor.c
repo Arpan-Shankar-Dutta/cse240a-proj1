@@ -38,17 +38,20 @@ int verbose;
 //TODO: Add your own Branch Predictor data structures here
 //
 
-uint8_t *Global_BHT_G;            //Gshare structures
+//Gshare structures
+uint8_t *Global_BHT_G;
 uint32_t GHR_G;
 
-uint8_t *Global_BHT;              //tournament structures
+//tournament structures
+uint8_t *Global_BHT;
 uint32_t *PHT;
 uint8_t *Local_BHT;
 uint32_t GHR;
 uint8_t *CHT;
 
-uint8_t *Global_BHT_C;           //Custom structures
-uint32_t GHR_C;
+//Custom structures
+uint8_t *Global_BHT_C;                //2-bit predictors
+uint32_t GHR_C;                       //Global history register
 
 
 //------------------------------------//
@@ -71,7 +74,7 @@ void init_predictor()
   uint32_t local_bht_size = pow(2, lhistoryBits);
   uint32_t cht_size = pow(2, ghistoryBits);
 
-  uint32_t global_bht_size_C = pow(2, 13);
+  uint32_t global_bht_size_C = pow(2, 13);                        //2-bit predictor size calculation ( Total size = 2-bit * 2^13 entries = 16KB )
 
   Global_BHT_G = malloc(global_bht_size_G*sizeof(uint8_t));
 
@@ -80,7 +83,7 @@ void init_predictor()
   Local_BHT = malloc(local_bht_size*sizeof(uint8_t));
   CHT = malloc(cht_size*sizeof(uint8_t));
 
-  Global_BHT_C = malloc(global_bht_size_C*sizeof(uint8_t));
+  Global_BHT_C = malloc(global_bht_size_C*sizeof(uint8_t));       //2-bit predictor memory allocation
 
   for(i=0;i<global_bht_size_G;i++)
   {
@@ -111,12 +114,12 @@ void init_predictor()
 
   GHR = NOTTAKEN;
 
-  for(i=0;i<global_bht_size_C;i++)
+  for(i=0;i<global_bht_size_C;i++)                        //initializing Custom predictor data structure to Weakly Nottaken
   {
     Global_BHT_C[i] = WN;
   }
 
-  GHR_C = NOTTAKEN;
+  GHR_C = NOTTAKEN;                                       //initializing Custom predictor Global history to Nottaken
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -153,17 +156,23 @@ uint8_t tournament_predictor(uint32_t pc)           //Tournament prediction sche
 uint8_t custom_predictor(uint32_t pc)
 {
   uint8_t prediction_pc, prediction_ghr, prediction_gshare, prediction;
-  uint32_t global_bht_size = pow(2, 13) - 1;
-  uint32_t pc_low = pc & global_bht_size;
+  uint32_t global_bht_size = pow(2, 13) - 1;        //Mask for extracting lower 13 bits of PC
+  uint32_t pc_low = pc & global_bht_size;           //Calculating lower 13 bits of PC
 
-  uint32_t index0 = pc_low ^ GHR_C;
-  uint32_t index1 = pc_low;
-  uint32_t index2 = GHR_C;
+  uint32_t index0 = pc_low ^ GHR_C;                 //Xor of PC and GHR yields index that varies more and aliases less(Random indexing based on a hash function)
+  uint32_t index1 = pc_low;                         //Using PC directly to index predictors allows for storing prediction for a specific given PC(local prediction)
+  uint32_t index2 = GHR_C;                          //Using GHR directly to index predictors allows for storing prediction for a Global pattern(Global prediction)
 
-  prediction_gshare = (Global_BHT_C[index0]>=WT) ? TAKEN : NOTTAKEN;
+  //It is unlikely that all the entires of the 2-bit predictor table will be accessed. In fact many of the entires
+  //are not accesed and hence the space alloted to them is wasted. Therefore having 3 indices to the same predictor
+  //table allows better usage of the available resources by predicting based on different logic. Also using this instead
+  //of using multiple ways allows for one large table (can hold more values for a fixed size of predictor) and minimal overhead.
+
+  prediction_gshare = (Global_BHT_C[index0]>=WT) ? TAKEN : NOTTAKEN;      //predict taken if counter>=2 else nottaken
   prediction_pc = (Global_BHT_C[index1]>=WT) ? TAKEN : NOTTAKEN;
   prediction_ghr = (Global_BHT_C[index2]>=WT) ? TAKEN : NOTTAKEN;
 
+  //combining the 3 predictions from the 3 indices using majority function
   prediction = (prediction_gshare & prediction_pc) | (prediction_ghr & prediction_pc) | (prediction_ghr & prediction_gshare);
 
   return prediction;
@@ -269,14 +278,14 @@ void train_tournament_predictor(uint32_t pc, uint8_t outcome)             //Trai
 
 void train_custom_predictor(uint32_t pc, uint8_t outcome)
 {
-  uint32_t global_bht_size = pow(2, 13) - 1;
+  uint32_t global_bht_size = pow(2, 13) - 1;          //calculating index and size similar to custom prediction function
   uint32_t pc_low = pc & global_bht_size;
 
   uint32_t index0 = pc_low ^ GHR_C;
   uint32_t index1 = pc_low;
   uint32_t index2 = GHR_C;
 
-  if(outcome==TAKEN && Global_BHT_C[index0]<ST)
+  if(outcome==TAKEN && Global_BHT_C[index0]<ST)       //incrementing or decrementing the 2-bit saturarting counters at all the 3 indices based on the outcome
   {
     Global_BHT_C[index0]++;
   }
@@ -303,7 +312,8 @@ void train_custom_predictor(uint32_t pc, uint8_t outcome)
     Global_BHT_C[index2]--;
   }
 
-  GHR_C = ((GHR_C<<1) & global_bht_size) + outcome;
+  //Size of GHR is 13 bit < 256-bit
+  GHR_C = ((GHR_C<<1) & global_bht_size) + outcome;   //Updating Global history based on outcome by left shifting GHR and placing the new outcome at LSB
 }
 
 void train_predictor(uint32_t pc, uint8_t outcome)

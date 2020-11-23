@@ -127,7 +127,7 @@ main(int argc, char *argv[])
     train_predictor(pc, outcome);
   }
 
-  free(Global_BHT);
+  free(Global_BHT);                   //freeing up allocated data structures in predictor.c
   free(Global_BHT_G);
   free(Global_BHT_C);
   free(PHT);

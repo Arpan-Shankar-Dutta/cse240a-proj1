@@ -61,8 +61,8 @@ extern uint8_t *Local_BHT;
 extern uint32_t GHR;
 extern uint8_t *CHT;
 
-uint8_t *Global_BHT_C;           //Custom structures
-uint32_t GHR_C;
+extern uint8_t *Global_BHT_C;           //Custom structures declared
+extern uint32_t GHR_C;
 
 //------------------------------------//
 //    Predictor Function Prototypes   //
